@@ -128,3 +128,22 @@ func GetMessages(c fiber.Ctx) error {
 		"data":   messages,
 	})
 }
+
+// GetConversationList trả về danh sách hội thoại của user hiện tại
+// kèm thông tin đối tác và tin nhắn cuối cùng (kiểu Messenger)
+func GetConversationList(c fiber.Ctx) error {
+	userID := c.Locals("user_id").(string)
+
+	conversations, err := repo.GetConversationList(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  false,
+			"message": "Failed to load conversations",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"status": true,
+		"data":   conversations,
+	})
+}

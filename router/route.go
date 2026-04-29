@@ -58,5 +58,6 @@ func setupRouter(fiberApp *fiber.App) {
 	api.Post("/unfriend.json", handler.RemoveFriend)
 
 	// message routes
-	api.Get("/messages", handler.GetMessages)
+	api.Get("/messages.json", handler.GetMessages)
+	api.Get("/conversations.json", handler.GetConversationList)
 }
