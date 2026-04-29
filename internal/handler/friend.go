@@ -79,13 +79,17 @@ func GetPendingFriendRequests(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{"status": true, "message": "Pending friend requests retrieved successfully", "data": requests})
 }
 
+type FriendWithOnlineStatus struct {
+	model.User
+	Online bool `json:"online"`
+}
+
 func GetFriends(c fiber.Ctx) error {
 	user, ok := c.Locals("user").(model.User)
 	if !ok {
 		return c.JSON(fiber.Map{"status": false, "message": "Please login again"})
 	}
 	friends, err := repo.GetFriendsByUserIDFromCache(user.ID.String())
-	log.Println("🚀 ~ file: friend.go ~ line 86 ~ funcGetFriends ~ friends : ", friends)
 	if err != nil {
 		return c.JSON(fiber.Map{"status": false, "message": "Failed to get friends from cache", "error": err.Error()})
 	}
@@ -98,7 +102,23 @@ func GetFriends(c fiber.Ctx) error {
 			log.Println("warning: cannot set friends cache:", err)
 		}
 	}
-	return c.JSON(fiber.Map{"status": true, "message": "Friends retrieved successfully", "data": friends})
+
+	ids := make([]string, 0, len(friends))
+	for _, f := range friends {
+		ids = append(ids, f.ID.String())
+	}
+
+	statuses, err := repo.GetUsersOnlineStatus(ids)
+	if err != nil {
+		log.Println("warning: cannot get online status:", err)
+	}
+
+	result := make([]FriendWithOnlineStatus, 0, len(friends))
+	for _, f := range friends {
+		result = append(result, FriendWithOnlineStatus{User: f, Online: statuses[f.ID.String()]})
+	}
+
+	return c.JSON(fiber.Map{"status": true, "message": "Friends retrieved successfully", "data": result})
 }
 
 func RemoveFriend(c fiber.Ctx) error {

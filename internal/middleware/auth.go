@@ -54,6 +54,7 @@ func jwtUserSuccess(c fiber.Ctx) error {
 
 	c.Locals("user", *user)
 	c.Locals("user_id", user.ID.String())
+	_ = repo.SetUserOnline(user.ID.String())
 	return c.Next()
 }
 

@@ -6,6 +6,7 @@ import (
 	"core/internal/middleware"
 	"fmt"
 
+	fiberws "github.com/gofiber/contrib/v3/websocket"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/logger"
@@ -26,6 +27,15 @@ func Setup() {
 }
 
 func setupRouter(fiberApp *fiber.App) {
+	// WebSocket route (xác thực qua query ?token=...)
+	fiberApp.Use("/ws", func(c fiber.Ctx) error {
+		if fiberws.IsWebSocketUpgrade(c) {
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+	fiberApp.Get("/ws", handler.WSAuthMiddleware, fiberws.New(handler.ChatWebSocket))
+
 	api := fiberApp.Group("/api", logger.New())
 	api.Get("", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": true, "message": "API is working"})
@@ -47,4 +57,6 @@ func setupRouter(fiberApp *fiber.App) {
 	api.Get("/friend_requests.json", handler.GetPendingFriendRequests)
 	api.Post("/unfriend.json", handler.RemoveFriend)
 
+	// message routes
+	api.Get("/messages", handler.GetMessages)
 }

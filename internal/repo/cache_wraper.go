@@ -13,11 +13,13 @@ import (
 const CacheRootKey = "network_social"
 
 const (
-	CacheKeyFriendsByUserID = CacheRootKey + ":friends_by_user_id:%s" // friends_by_user_id:{user_id} -> list of friend IDs
+	CacheKeyFriendsByUserID  = CacheRootKey + ":friends_by_user_id:%s" // friends_by_user_id:{user_id} -> list of friend IDs
+	CacheKeyUserOnlineStatus = CacheRootKey + ":user_online:%s"        // user_online:{user_id} -> 1
 )
 
 const (
 	TTLCacheFriendsByUserID = 10 * time.Minute
+	TTLUserOnlineStatus     = 2 * time.Minute
 )
 
 func GetFriendsByUserIDFromCache(userID string) ([]model.User, error) {
@@ -71,4 +73,43 @@ func InvalidateFriendsByUserIDCache(userIDs ...string) error {
 	}
 
 	return app.RedisClient.Del(app.Ctx, keys...).Err()
+}
+
+func SetUserOnline(userID string) error {
+	if app.RedisClient == nil {
+		return nil
+	}
+
+	cacheKey := fmt.Sprintf(CacheKeyUserOnlineStatus, userID)
+	return app.RedisClient.Set(app.Ctx, cacheKey, 1, TTLUserOnlineStatus).Err()
+}
+
+func GetUsersOnlineStatus(userIDs []string) (map[string]bool, error) {
+	status := make(map[string]bool, len(userIDs))
+	if app.RedisClient == nil {
+		for _, id := range userIDs {
+			status[id] = false
+		}
+		return status, nil
+	}
+
+	keys := make([]string, 0, len(userIDs))
+	for _, id := range userIDs {
+		keys = append(keys, fmt.Sprintf(CacheKeyUserOnlineStatus, id))
+	}
+
+	results, err := app.RedisClient.MGet(app.Ctx, keys...).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	for idx, id := range userIDs {
+		if results[idx] != nil {
+			status[id] = true
+		} else {
+			status[id] = false
+		}
+	}
+
+	return status, nil
 }

@@ -95,6 +95,7 @@ func (dbConf *DatabaseConfig) Setup() {
 		&model.OTP{},
 		&model.FriendRequest{},
 		&model.Friendship{},
+		&model.Message{},
 	}
 
 	for _, m := range models {
